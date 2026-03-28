@@ -19,7 +19,13 @@ class MessageMiddlewareQueueRabbitMQ(MessageMiddlewareQueue):
 	#Si se pierde la conexión con el middleware eleva MessageMiddlewareDisconnectedError.
 	#Si ocurre un error interno que no puede resolverse eleva MessageMiddlewareMessageError.
     def start_consuming(self, on_message_callback):
-        self._queue.basic_consume(queue=self._queue_name, on_message_callback=on_message_callback, auto_ack=False)
+        def internal_on_message_callback(ch, method, properties, body):
+            ack_function = lambda: ch.basic_ack(delivery_tag=method.delivery_tag)
+            nack_function = lambda: ch.basic_nack(delivery_tag=method.delivery_tag)
+
+            on_message_callback(body, ack_function, nack_function)
+            
+        self._queue.basic_consume(queue=self._queue_name, on_message_callback=internal_on_message_callback, auto_ack=False)
         self._queue.start_consuming()
 	
 	#Si se estaba consumiendo desde la cola, se detiene la escucha. Si
