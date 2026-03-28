@@ -1,12 +1,13 @@
 import pika
 import random
 import string
-from .middleware import MessageMiddlewareQueue, MessageMiddlewareExchange
+from .middleware import MessageMiddlewareQueue, MessageMiddlewareExchange, MessageMiddlewareCloseError
 
 class MessageMiddlewareQueueRabbitMQ(MessageMiddlewareQueue):
 
     def __init__(self, host, queue_name):
-        return pika.BlockingConnection(pika.ConnectionParameters(host=host))
+        self._queue = pika.BlockingConnection(pika.ConnectionParameters(host=host)).channel()
+        self._queue.queue_declare(queue=queue_name)
     
     #Comienza a escuchar a la cola e invoca a on_message_callback tras
 	#cada mensaje de datos o de control con el cuerpo del mensaje.
@@ -19,22 +20,25 @@ class MessageMiddlewareQueueRabbitMQ(MessageMiddlewareQueue):
     def start_consuming(self, on_message_callback):
         pass
 	
-	#Si se estaba consumiendo desde la cola/exchange, se detiene la escucha. Si
-	#no se estaba consumiendo de la cola/exchange, no tiene efecto, ni levanta
+	#Si se estaba consumiendo desde la cola, se detiene la escucha. Si
+	#no se estaba consumiendo de la cola, no tiene efecto, ni levanta
 	#Si se pierde la conexión con el middleware eleva MessageMiddlewareDisconnectedError.
     def stop_consuming(self):
         pass
         
-    #Envía un mensaje a la cola o al tópico con el que se inicializó el exchange.
+    #Envía un mensaje a la cola.
     #Si se pierde la conexión con el middleware eleva MessageMiddlewareDisconnectedError.
     #Si ocurre un error interno que no puede resolverse eleva MessageMiddlewareMessageError.
     def send(self, message):
         pass
 
-    #Se desconecta de la cola o exchange al que estaba conectado.
+    #Se desconecta de la cola.
     #Si ocurre un error interno que no puede resolverse eleva MessageMiddlewareCloseError.
     def close(self):
-        pass
+        try:
+            self._queue.close()
+        except Exception as e:
+            raise MessageMiddlewareCloseError
 
 class MessageMiddlewareExchangeRabbitMQ(MessageMiddlewareExchange):
     
