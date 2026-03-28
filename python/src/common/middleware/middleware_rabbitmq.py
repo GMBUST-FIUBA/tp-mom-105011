@@ -1,7 +1,7 @@
 import pika
 import random
 import string
-from .middleware import MessageMiddlewareQueue, MessageMiddlewareExchange, MessageMiddlewareCloseError
+from .middleware import MessageMiddlewareQueue, MessageMiddlewareExchange, MessageMiddlewareCloseError, MessageMiddlewareMessageError, MessageMiddlewareDisconnectedError
 
 class MessageMiddlewareQueueRabbitMQ(MessageMiddlewareQueue):
 
@@ -23,10 +23,18 @@ class MessageMiddlewareQueueRabbitMQ(MessageMiddlewareQueue):
             ack_function = lambda: ch.basic_ack(delivery_tag=method.delivery_tag)
             nack_function = lambda: ch.basic_nack(delivery_tag=method.delivery_tag)
 
-            on_message_callback(body, ack_function, nack_function)
-            
+            try:
+                on_message_callback(body, ack_function, nack_function)
+            except pika.exceptions.ChannelClosed:
+                raise MessageMiddlewareDisconnectedError
+            except Exception:
+                raise MessageMiddlewareMessageError
+
         self._queue.basic_consume(queue=self._queue_name, on_message_callback=internal_on_message_callback, auto_ack=False)
-        self._queue.start_consuming()
+        try:
+            self._queue.start_consuming()
+        except Exception:
+            raise MessageMiddlewareDisconnectedError
 	
 	#Si se estaba consumiendo desde la cola, se detiene la escucha. Si
 	#no se estaba consumiendo de la cola, no tiene efecto, ni levanta
