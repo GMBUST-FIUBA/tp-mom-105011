@@ -32,7 +32,7 @@ class MessageMiddlewareQueueRabbitMQ(MessageMiddlewareQueue):
     #Si se pierde la conexión con el middleware eleva MessageMiddlewareDisconnectedError.
     #Si ocurre un error interno que no puede resolverse eleva MessageMiddlewareMessageError.
     def send(self, message):
-        pass
+        self._queue.basic_publish(exchange="", routing_key=self._queue_name, body=message)
 
     #Se desconecta de la cola.
     #Si ocurre un error interno que no puede resolverse eleva MessageMiddlewareCloseError.
