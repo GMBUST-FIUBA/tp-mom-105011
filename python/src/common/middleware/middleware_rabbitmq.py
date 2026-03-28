@@ -9,6 +9,7 @@ class MessageMiddlewareQueueRabbitMQ(MessageMiddlewareQueue):
         self._queue = pika.BlockingConnection(pika.ConnectionParameters(host=host)).channel()
         self._queue_name = queue_name
         self._queue.queue_declare(queue=queue_name)
+        self._is_consuming = False
     
     #Comienza a escuchar a la cola e invoca a on_message_callback tras
 	#cada mensaje de datos o de control con el cuerpo del mensaje.
@@ -32,15 +33,19 @@ class MessageMiddlewareQueueRabbitMQ(MessageMiddlewareQueue):
 
         self._queue.basic_consume(queue=self._queue_name, on_message_callback=internal_on_message_callback, auto_ack=False)
         try:
+            self._is_consuming = True
             self._queue.start_consuming()
+        except pika.exceptions.ChannelClosed:
+                raise MessageMiddlewareDisconnectedError
         except Exception:
-            raise MessageMiddlewareDisconnectedError
+            raise MessageMiddlewareMessageError
 	
 	#Si se estaba consumiendo desde la cola, se detiene la escucha. Si
 	#no se estaba consumiendo de la cola, no tiene efecto, ni levanta
 	#Si se pierde la conexión con el middleware eleva MessageMiddlewareDisconnectedError.
     def stop_consuming(self):
-        self._queue.stop_consuming()
+        if self._is_consuming:
+            self._queue.stop_consuming()
         
     #Envía un mensaje a la cola.
     #Si se pierde la conexión con el middleware eleva MessageMiddlewareDisconnectedError.
