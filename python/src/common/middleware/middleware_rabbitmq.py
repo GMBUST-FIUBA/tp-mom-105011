@@ -6,7 +6,7 @@ from .middleware import MessageMiddlewareQueue, MessageMiddlewareExchange
 class MessageMiddlewareQueueRabbitMQ(MessageMiddlewareQueue):
 
     def __init__(self, host, queue_name):
-        pass
+        return pika.BlockingConnection(pika.ConnectionParameters(host=host, queue_name=queue_name))
 
 class MessageMiddlewareExchangeRabbitMQ(MessageMiddlewareExchange):
     
