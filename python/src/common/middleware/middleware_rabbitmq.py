@@ -59,7 +59,7 @@ class MessageMiddlewareQueueRabbitMQ(MessageMiddlewareQueue):
         try:
             self._queue.basic_publish(exchange="", routing_key=self._queue_name, body=message)
         except pika.exceptions.ChannelClosed:
-                raise MessageMiddlewareDisconnectedError
+            raise MessageMiddlewareDisconnectedError
         except Exception:
             raise MessageMiddlewareMessageError
 
@@ -74,9 +74,14 @@ class MessageMiddlewareQueueRabbitMQ(MessageMiddlewareQueue):
 class MessageMiddlewareExchangeRabbitMQ(MessageMiddlewareExchange):
     
     def __init__(self, host, exchange_name, routing_keys):
-        pass
+        self._channel = pika.BlockingConnection(pika.ConnectionParameters(host=host)).channel()
+        self._exchange_name = exchange_name
+        self._host = host
+        self._routing_keys = routing_keys
+        self._channel.exchange_declare(exchange=self._exchange_name, exchange_type='direct')
+        self._is_consuming = False
 
-    #Comienza a escuchar a la cola e invoca a on_message_callback tras
+    #Comienza a escuchar el exchange e invoca a on_message_callback tras
 	#cada mensaje de datos o de control con el cuerpo del mensaje.
 	# on_message_callback tiene como parámetros:
 	# message - El valor tal y como lo recibe el método send de esta clase.
@@ -85,10 +90,38 @@ class MessageMiddlewareExchangeRabbitMQ(MessageMiddlewareExchange):
 	#Si se pierde la conexión con el middleware eleva MessageMiddlewareDisconnectedError.
 	#Si ocurre un error interno que no puede resolverse eleva MessageMiddlewareMessageError.
     def start_consuming(self, on_message_callback):
-        pass
+        # Crear nueva cola
+        self._channel = pika.BlockingConnection(pika.ConnectionParameters(host=self._host)).channel()
+        result = self._channel.queue_declare(queue='', exclusive=True)
+        new_channel_name = result.method.queue
+
+        # Definir wrapper de callback
+        def internal_on_message_callback(ch, method, properties, body):
+            ack_function = lambda: ch.basic_ack(delivery_tag=method.delivery_tag)
+            nack_function = lambda: ch.basic_nack(delivery_tag=method.delivery_tag)
+
+            try:
+                on_message_callback(body, ack_function, nack_function)
+            except pika.exceptions.ChannelClosed:
+                raise MessageMiddlewareDisconnectedError
+            except Exception:
+                raise MessageMiddlewareMessageError
+
+        # Asociar cola a los routing_keys
+        for routing_key in self._routing_keys:
+            self._channel.basic_consume(queue=new_channel_name, on_message_callback=internal_on_message_callback, routing_key=routing_key)
+
+        # Consumir
+        try:
+            self._is_consuming = True
+            self._channel.start_consuming()
+        except pika.exceptions.ChannelClosed:
+                raise MessageMiddlewareDisconnectedError
+        except Exception:
+            raise MessageMiddlewareMessageError
         
-    #Si se estaba consumiendo desde la cola, se detiene la escucha. Si
-    #no se estaba consumiendo de la cola, no tiene efecto, ni levanta
+    #Si se estaba consumiendo desde el exchange, se detiene la escucha. Si
+    #no se estaba consumiendo del exchange, no tiene efecto, ni levanta
     #Si se pierde la conexión con el middleware eleva MessageMiddlewareDisconnectedError.
     def stop_consuming(self):
         pass
@@ -102,4 +135,7 @@ class MessageMiddlewareExchangeRabbitMQ(MessageMiddlewareExchange):
     #Se desconecta del exchange al que estaba conectado.
     #Si ocurre un error interno que no puede resolverse eleva MessageMiddlewareCloseError.
     def close(self):
-        pass
+        try:
+            self._channel.close()
+        except Exception:
+            raise MessageMiddlewareCloseError
