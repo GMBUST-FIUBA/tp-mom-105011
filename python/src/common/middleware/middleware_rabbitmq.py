@@ -107,10 +107,12 @@ class MessageMiddlewareExchangeRabbitMQ(MessageMiddlewareExchange):
             except Exception:
                 raise MessageMiddlewareMessageError
 
-        # Asociar cola a los routing_keys
+        # Asociar cola a los routing_keys deseados
         for routing_key in self._routing_keys:
-            self._channel.basic_consume(queue=new_channel_name, on_message_callback=internal_on_message_callback, routing_key=routing_key)
+            self._channel.queue_bind(exchange=self._exchange_name, queue=new_channel_name, routing_key=routing_key)
 
+        # Asociar callback
+        self._channel.basic_consume(queue=new_channel_name, on_message_callback=internal_on_message_callback)
         # Consumir
         try:
             self._is_consuming = True
@@ -124,13 +126,23 @@ class MessageMiddlewareExchangeRabbitMQ(MessageMiddlewareExchange):
     #no se estaba consumiendo del exchange, no tiene efecto, ni levanta
     #Si se pierde la conexión con el middleware eleva MessageMiddlewareDisconnectedError.
     def stop_consuming(self):
-        pass
+        if self._is_consuming:
+            try:
+                self._channel.stop_consuming()
+                self._is_consuming = False
+            except pika.exceptions.ChannelClosed:
+                raise MessageMiddlewareDisconnectedError
         
     #Envía un mensaje al tópico con el que se inicializó el exchange.
     #Si se pierde la conexión con el middleware eleva MessageMiddlewareDisconnectedError.
     #Si ocurre un error interno que no puede resolverse eleva MessageMiddlewareMessageError.
     def send(self, message):
-        pass
+        try:
+            self._channel.basic_publish(exchange=self._exchange_name, body=message, routing_key=self._routing_keys[0])
+        except pika.exceptions.ChannelClosed:
+            raise MessageMiddlewareDisconnectedError
+        except Exception:
+            raise MessageMiddlewareMessageError
 
     #Se desconecta del exchange al que estaba conectado.
     #Si ocurre un error interno que no puede resolverse eleva MessageMiddlewareCloseError.
