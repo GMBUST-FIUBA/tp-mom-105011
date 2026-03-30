@@ -41,7 +41,6 @@ class MessageMiddlewareQueueRabbitMQ(MessageMiddlewareQueue):
 
         try:
             self._callback_function(body, ack_function, nack_function)
-            print(f"Mensaje: {body}")
         except (pika.exceptions.ChannelClosed, pika.exceptions.AMQPConnectionError):
             raise MessageMiddlewareDisconnectedError
         except Exception:
