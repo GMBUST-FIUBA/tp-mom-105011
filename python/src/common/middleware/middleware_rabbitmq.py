@@ -11,6 +11,7 @@ class MessageMiddlewareQueueRabbitMQ(MessageMiddlewareQueue):
         self._queue_name = queue_name
         self._queue.queue_declare(queue=queue_name)
         self._queue.basic_qos(prefetch_count=1)
+        self._queue.confirm_delivery()
         self._is_consuming = False
     
     #Comienza a escuchar a la cola e invoca a on_message_callback tras
@@ -40,6 +41,7 @@ class MessageMiddlewareQueueRabbitMQ(MessageMiddlewareQueue):
 
         try:
             self._callback_function(body, ack_function, nack_function)
+            print(f"Mensaje: {body}")
         except (pika.exceptions.ChannelClosed, pika.exceptions.AMQPConnectionError):
             raise MessageMiddlewareDisconnectedError
         except Exception:
@@ -73,6 +75,7 @@ class MessageMiddlewareQueueRabbitMQ(MessageMiddlewareQueue):
     def close(self):
         try:
             self._queue.close()
+            self._connection.close()
         except Exception:
             raise MessageMiddlewareCloseError
 
@@ -85,6 +88,7 @@ class MessageMiddlewareExchangeRabbitMQ(MessageMiddlewareExchange):
         self._host = host
         self._routing_keys = routing_keys
         self._channel.exchange_declare(exchange=self._exchange_name, exchange_type='direct')
+        self._channel.confirm_delivery()
         self._is_consuming = False
 
     #Comienza a escuchar el exchange e invoca a on_message_callback tras
@@ -159,5 +163,6 @@ class MessageMiddlewareExchangeRabbitMQ(MessageMiddlewareExchange):
     def close(self):
         try:
             self._channel.close()
+            self._connection.close()
         except Exception:
             raise MessageMiddlewareCloseError
