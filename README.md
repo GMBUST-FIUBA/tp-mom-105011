@@ -39,3 +39,11 @@ Instalar los dependencias de la suite de pruebas:
 Instalar una versión de Golang superior a `1.24`.
 Instalar los dependencias de la suite de pruebas:
 `go mod download`
+
+# Resolución
+
+Alumno: Bustamante Gonzalo Manuel
+Padrón: 105011
+DNI: 43.086.565
+
+El trabajo fue realizado en Python
