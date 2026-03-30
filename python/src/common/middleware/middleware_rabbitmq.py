@@ -149,7 +149,8 @@ class MessageMiddlewareExchangeRabbitMQ(MessageMiddlewareExchange):
     #Si ocurre un error interno que no puede resolverse eleva MessageMiddlewareMessageError.
     def send(self, message):
         try:
-            self._channel.basic_publish(exchange=self._exchange_name, body=message, routing_key=self._routing_keys[0])
+            for routing_key in self._routing_keys:
+                self._channel.basic_publish(exchange=self._exchange_name, body=message, routing_key=routing_key)
         except (pika.exceptions.ChannelClosed, pika.exceptions.AMQPConnectionError):
             raise MessageMiddlewareDisconnectedError
         except Exception:
