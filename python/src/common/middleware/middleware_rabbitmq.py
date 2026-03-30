@@ -96,8 +96,7 @@ class MessageMiddlewareExchangeRabbitMQ(MessageMiddlewareExchange):
         # Guardar función de callback
         self._callback_function = on_message_callback
 
-        # Crear nueva cola
-        self._channel = pika.BlockingConnection(pika.ConnectionParameters(host=self._host)).channel()
+        # Declarar canal como cola receptora
         result = self._channel.queue_declare(queue='', exclusive=True)
         new_channel_name = result.method.queue
 
