@@ -6,7 +6,8 @@ from .middleware import MessageMiddlewareQueue, MessageMiddlewareExchange, Messa
 class MessageMiddlewareQueueRabbitMQ(MessageMiddlewareQueue):
 
     def __init__(self, host, queue_name):
-        self._queue = pika.BlockingConnection(pika.ConnectionParameters(host=host)).channel()
+        self._connection = pika.BlockingConnection(pika.ConnectionParameters(host=host))
+        self._queue = self._connection.channel()
         self._queue_name = queue_name
         self._queue.queue_declare(queue=queue_name)
         self._queue.basic_qos(prefetch_count=1)
@@ -51,6 +52,7 @@ class MessageMiddlewareQueueRabbitMQ(MessageMiddlewareQueue):
         if self._is_consuming:
             try:
                 self._queue.stop_consuming()
+                self._connection.close()
                 self._is_consuming = False
             except (pika.exceptions.ChannelClosed, pika.exceptions.AMQPConnectionError):
                 raise MessageMiddlewareDisconnectedError
@@ -77,7 +79,8 @@ class MessageMiddlewareQueueRabbitMQ(MessageMiddlewareQueue):
 class MessageMiddlewareExchangeRabbitMQ(MessageMiddlewareExchange):
     
     def __init__(self, host, exchange_name, routing_keys):
-        self._channel = pika.BlockingConnection(pika.ConnectionParameters(host=host)).channel()
+        self._connection = pika.BlockingConnection(pika.ConnectionParameters(host=host))
+        self._channel = self._connection.channel()
         self._exchange_name = exchange_name
         self._host = host
         self._routing_keys = routing_keys
@@ -135,6 +138,7 @@ class MessageMiddlewareExchangeRabbitMQ(MessageMiddlewareExchange):
         if self._is_consuming:
             try:
                 self._channel.stop_consuming()
+                self._connection.close()
                 self._is_consuming = False
             except (pika.exceptions.ChannelClosed, pika.exceptions.AMQPConnectionError):
                 raise MessageMiddlewareDisconnectedError
