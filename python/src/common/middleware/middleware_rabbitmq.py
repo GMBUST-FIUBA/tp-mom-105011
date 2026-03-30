@@ -27,7 +27,7 @@ class MessageMiddlewareQueueRabbitMQ(MessageMiddlewareQueue):
         try:
             self._is_consuming = True
             self._queue.start_consuming()
-        except pika.exceptions.ChannelClosed:
+        except (pika.exceptions.ChannelClosed, pika.exceptions.AMQPConnectionError):
                 raise MessageMiddlewareDisconnectedError
         except Exception:
             raise MessageMiddlewareMessageError
@@ -39,7 +39,7 @@ class MessageMiddlewareQueueRabbitMQ(MessageMiddlewareQueue):
 
         try:
             self._callback_function(body, ack_function, nack_function)
-        except pika.exceptions.ChannelClosed:
+        except (pika.exceptions.ChannelClosed, pika.exceptions.AMQPConnectionError):
             raise MessageMiddlewareDisconnectedError
         except Exception:
             raise MessageMiddlewareMessageError
@@ -52,7 +52,7 @@ class MessageMiddlewareQueueRabbitMQ(MessageMiddlewareQueue):
             try:
                 self._queue.stop_consuming()
                 self._is_consuming = False
-            except pika.exceptions.ChannelClosed:
+            except (pika.exceptions.ChannelClosed, pika.exceptions.AMQPConnectionError):
                 raise MessageMiddlewareDisconnectedError
         
     #Envía un mensaje a la cola.
@@ -61,7 +61,7 @@ class MessageMiddlewareQueueRabbitMQ(MessageMiddlewareQueue):
     def send(self, message):
         try:
             self._queue.basic_publish(exchange="", routing_key=self._queue_name, body=message)
-        except pika.exceptions.ChannelClosed:
+        except (pika.exceptions.ChannelClosed, pika.exceptions.AMQPConnectionError):
             raise MessageMiddlewareDisconnectedError
         except Exception:
             raise MessageMiddlewareMessageError
@@ -110,7 +110,7 @@ class MessageMiddlewareExchangeRabbitMQ(MessageMiddlewareExchange):
         try:
             self._is_consuming = True
             self._channel.start_consuming()
-        except pika.exceptions.ChannelClosed:
+        except (pika.exceptions.ChannelClosed, pika.exceptions.AMQPConnectionError):
                 raise MessageMiddlewareDisconnectedError
         except Exception:
             raise MessageMiddlewareMessageError
@@ -122,7 +122,7 @@ class MessageMiddlewareExchangeRabbitMQ(MessageMiddlewareExchange):
 
         try:
             self._callback_function(body, ack_function, nack_function)
-        except pika.exceptions.ChannelClosed:
+        except (pika.exceptions.ChannelClosed, pika.exceptions.AMQPConnectionError):
             raise MessageMiddlewareDisconnectedError
         except Exception:
             raise MessageMiddlewareMessageError
@@ -136,7 +136,7 @@ class MessageMiddlewareExchangeRabbitMQ(MessageMiddlewareExchange):
             try:
                 self._channel.stop_consuming()
                 self._is_consuming = False
-            except pika.exceptions.ChannelClosed:
+            except (pika.exceptions.ChannelClosed, pika.exceptions.AMQPConnectionError):
                 raise MessageMiddlewareDisconnectedError
         
     #Envía un mensaje al tópico con el que se inicializó el exchange.
@@ -145,7 +145,7 @@ class MessageMiddlewareExchangeRabbitMQ(MessageMiddlewareExchange):
     def send(self, message):
         try:
             self._channel.basic_publish(exchange=self._exchange_name, body=message, routing_key=self._routing_keys[0])
-        except pika.exceptions.ChannelClosed:
+        except (pika.exceptions.ChannelClosed, pika.exceptions.AMQPConnectionError):
             raise MessageMiddlewareDisconnectedError
         except Exception:
             raise MessageMiddlewareMessageError
