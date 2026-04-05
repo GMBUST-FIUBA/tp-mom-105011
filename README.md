@@ -43,7 +43,7 @@ Instalar los dependencias de la suite de pruebas:
 # Resolución
 
 Alumno: Bustamante Gonzalo Manuel
-Padrón: 105011
+Padrón: 105.011
 DNI: 43.086.565
 
-El trabajo fue realizado en Python
+El trabajo fue realizado en Python, con lo que los cambios fueron realizados en el archivo ubicado en `/python/src/common/middleware/middleware_rabbitmq.py`.
