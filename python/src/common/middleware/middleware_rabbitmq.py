@@ -43,15 +43,12 @@ class MessageMiddlewareQueueRabbitMQ(MessageMiddlewareQueue):
 
     # Wrapper de callback para cola
     def _internal_on_message_callback(self, ch, method, properties, body):
+        #Crear funciones de ACK y NACK
         ack_function = lambda: ch.basic_ack(delivery_tag=method.delivery_tag)
         nack_function = lambda: ch.basic_nack(delivery_tag=method.delivery_tag)
 
-        try:
-            self._callback_function(body, ack_function, nack_function)
-        except (pika.exceptions.ChannelClosed, pika.exceptions.AMQPConnectionError):
-            raise MessageMiddlewareDisconnectedError
-        except Exception:
-            raise MessageMiddlewareMessageError
+        # Invocar función de callback
+        self._callback_function(body, ack_function, nack_function)
 	
 	#Si se estaba consumiendo desde la cola, se detiene la escucha. Si
 	#no se estaba consumiendo de la cola, no tiene efecto, ni levanta
@@ -134,15 +131,12 @@ class MessageMiddlewareExchangeRabbitMQ(MessageMiddlewareExchange):
         
     # Wrapper de callback para exchange
     def _internal_on_message_callback(self, ch, method, properties, body):
+        #Crear funciones de ACK y NACK
         ack_function = lambda: ch.basic_ack(delivery_tag=method.delivery_tag)
         nack_function = lambda: ch.basic_nack(delivery_tag=method.delivery_tag)
 
-        try:
-            self._callback_function(body, ack_function, nack_function)
-        except (pika.exceptions.ChannelClosed, pika.exceptions.AMQPConnectionError):
-            raise MessageMiddlewareDisconnectedError
-        except Exception:
-            raise MessageMiddlewareMessageError
+        # Invocar función de callback
+        self._callback_function(body, ack_function, nack_function)
 
         
     #Si se estaba consumiendo desde el exchange, se detiene la escucha. Si
