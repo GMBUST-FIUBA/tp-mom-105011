@@ -14,7 +14,6 @@ class MessageMiddlewareQueueRabbitMQ(MessageMiddlewareQueue):
         self._queue_name = queue_name
         self._queue.queue_declare(queue=queue_name)
         self._queue.basic_qos(prefetch_count=1)
-        self._queue.confirm_delivery()
         self._is_consuming = False
     
     #Comienza a escuchar a la cola e invoca a on_message_callback tras
@@ -33,11 +32,13 @@ class MessageMiddlewareQueueRabbitMQ(MessageMiddlewareQueue):
 
         # Consumir
         try:
-            self._queue.start_consuming()
             self._is_consuming = True
+            self._queue.start_consuming()
         except (pika.exceptions.ChannelClosed, pika.exceptions.AMQPConnectionError):
+            self._is_consuming = False
             raise MessageMiddlewareDisconnectedError
         except Exception:
+            self._is_consuming = False
             raise MessageMiddlewareMessageError
 
     # Wrapper de callback para cola
@@ -96,7 +97,6 @@ class MessageMiddlewareExchangeRabbitMQ(MessageMiddlewareExchange):
         self._host = host
         self._routing_keys = routing_keys
         self._channel.exchange_declare(exchange=self._exchange_name, exchange_type='direct')
-        self._channel.confirm_delivery()
         self._is_consuming = False
 
     #Comienza a escuchar el exchange e invoca a on_message_callback tras
@@ -123,11 +123,13 @@ class MessageMiddlewareExchangeRabbitMQ(MessageMiddlewareExchange):
         self._channel.basic_consume(queue=new_channel_name, on_message_callback=self._internal_on_message_callback)
         # Consumir
         try:
-            self._channel.start_consuming()
             self._is_consuming = True
+            self._channel.start_consuming()
         except (pika.exceptions.ChannelClosed, pika.exceptions.AMQPConnectionError):
+            self._is_consuming = False
             raise MessageMiddlewareDisconnectedError
         except Exception:
+            self._is_consuming = False
             raise MessageMiddlewareMessageError
         
     # Wrapper de callback para exchange
