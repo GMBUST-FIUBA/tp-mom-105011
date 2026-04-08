@@ -27,8 +27,8 @@ class MessageMiddlewareQueueRabbitMQ(MessageMiddlewareQueue):
 
         self._queue.basic_consume(queue=self._queue_name, on_message_callback=self._internal_on_message_callback)
         try:
-            self._is_consuming = True
             self._queue.start_consuming()
+            self._is_consuming = True
         except (pika.exceptions.ChannelClosed, pika.exceptions.AMQPConnectionError):
                 raise MessageMiddlewareDisconnectedError
         except Exception:
@@ -74,6 +74,7 @@ class MessageMiddlewareQueueRabbitMQ(MessageMiddlewareQueue):
         try:
             self._queue.close()
             self._connection.close()
+            self._is_consuming = False
         except Exception:
             raise MessageMiddlewareCloseError
 
@@ -113,10 +114,10 @@ class MessageMiddlewareExchangeRabbitMQ(MessageMiddlewareExchange):
         self._channel.basic_consume(queue=new_channel_name, on_message_callback=self._internal_on_message_callback)
         # Consumir
         try:
-            self._is_consuming = True
             self._channel.start_consuming()
+            self._is_consuming = True
         except (pika.exceptions.ChannelClosed, pika.exceptions.AMQPConnectionError):
-                raise MessageMiddlewareDisconnectedError
+            raise MessageMiddlewareDisconnectedError
         except Exception:
             raise MessageMiddlewareMessageError
         
@@ -162,5 +163,6 @@ class MessageMiddlewareExchangeRabbitMQ(MessageMiddlewareExchange):
         try:
             self._channel.close()
             self._connection.close()
+            self._is_consuming
         except Exception:
             raise MessageMiddlewareCloseError
