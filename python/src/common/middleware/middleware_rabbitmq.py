@@ -6,8 +6,11 @@ from .middleware import MessageMiddlewareQueue, MessageMiddlewareExchange, Messa
 class MessageMiddlewareQueueRabbitMQ(MessageMiddlewareQueue):
 
     def __init__(self, host, queue_name):
+        # Iniciar conexión con broker de RabbitMQ
         self._connection = pika.BlockingConnection(pika.ConnectionParameters(host=host))
         self._queue = self._connection.channel()
+
+        # Inicializar cola
         self._queue_name = queue_name
         self._queue.queue_declare(queue=queue_name)
         self._queue.basic_qos(prefetch_count=1)
@@ -23,14 +26,17 @@ class MessageMiddlewareQueueRabbitMQ(MessageMiddlewareQueue):
 	#Si se pierde la conexión con el middleware eleva MessageMiddlewareDisconnectedError.
 	#Si ocurre un error interno que no puede resolverse eleva MessageMiddlewareMessageError.
     def start_consuming(self, on_message_callback):
-        self._callback_function = on_message_callback
 
+        # Agregar callback
+        self._callback_function = on_message_callback
         self._queue.basic_consume(queue=self._queue_name, on_message_callback=self._internal_on_message_callback)
+
+        # Consumir
         try:
             self._queue.start_consuming()
             self._is_consuming = True
         except (pika.exceptions.ChannelClosed, pika.exceptions.AMQPConnectionError):
-                raise MessageMiddlewareDisconnectedError
+            raise MessageMiddlewareDisconnectedError
         except Exception:
             raise MessageMiddlewareMessageError
 
@@ -81,8 +87,11 @@ class MessageMiddlewareQueueRabbitMQ(MessageMiddlewareQueue):
 class MessageMiddlewareExchangeRabbitMQ(MessageMiddlewareExchange):
     
     def __init__(self, host, exchange_name, routing_keys):
+        # Iniciar conexión
         self._connection = pika.BlockingConnection(pika.ConnectionParameters(host=host))
         self._channel = self._connection.channel()
+
+        # Inicializar configuración de exchange
         self._exchange_name = exchange_name
         self._host = host
         self._routing_keys = routing_keys
@@ -150,6 +159,7 @@ class MessageMiddlewareExchangeRabbitMQ(MessageMiddlewareExchange):
     #Si ocurre un error interno que no puede resolverse eleva MessageMiddlewareMessageError.
     def send(self, message):
         try:
+            # Enviar según los routing keys con los que se inicializó
             for routing_key in self._routing_keys:
                 self._channel.basic_publish(exchange=self._exchange_name, body=message, routing_key=routing_key)
         except (pika.exceptions.ChannelClosed, pika.exceptions.AMQPConnectionError):
@@ -163,6 +173,6 @@ class MessageMiddlewareExchangeRabbitMQ(MessageMiddlewareExchange):
         try:
             self._channel.close()
             self._connection.close()
-            self._is_consuming
+            self._is_consuming = False
         except Exception:
             raise MessageMiddlewareCloseError
